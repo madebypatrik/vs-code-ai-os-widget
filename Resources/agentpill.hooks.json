@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "hooks": {
+    "UserPromptSubmit": [{ "type": "command", "command": "~/.agentpill/report.sh", "timeoutSec": 2 }],
+    "PreToolUse":       [{ "type": "command", "command": "~/.agentpill/report.sh", "timeoutSec": 2 }],
+    "PostToolUse":      [{ "type": "command", "command": "~/.agentpill/report.sh", "timeoutSec": 2 }],
+    "Stop":             [{ "type": "command", "command": "~/.agentpill/report.sh", "timeoutSec": 2 }]
+  }
+}

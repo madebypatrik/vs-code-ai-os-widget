@@ -1,0 +1,435 @@
+<title>AgentPill Promo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one 16:9 "screen" that plays a scripted 34 s film of a Mac menu bar; transport controls below. Single dark look, by choice. */
+:root {
+  color-scheme: dark;
+  --page: #0b0c0e;
+  --desk-a: #1b2433;
+  --desk-b: #2a1d1a;
+  --bar: rgba(22, 22, 24, 0.72);
+  --card: #141414;
+  --ink: #f3f2ee;
+  --body: #d3d1c7;
+  --muted: #b4b2a9;
+  --faint: #6f6d66;
+  --vscode: #007acc;
+  --claude: #d97757;
+  --amber: #ef9f27;
+  --green: #1d9e75;
+  --button: #262624;
+  --display: "Sora", "Avenir Next", system-ui, sans-serif;
+  --text: "Inter", -apple-system, system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--text);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 48px;
+}
+.wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: 16px; }
+
+/* ---------- stage ---------- */
+.stage {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 14px;
+  overflow: hidden;
+  container-type: inline-size;
+  background:
+    radial-gradient(60% 80% at 15% 100%, var(--desk-b), transparent 70%),
+    radial-gradient(70% 90% at 90% 10%, var(--desk-a), transparent 70%),
+    #101216;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 30px 80px rgba(0,0,0,0.5);
+}
+.menubar {
+  position: absolute; inset: 0 0 auto 0;
+  height: 4.2cqw;
+  background: var(--bar);
+  backdrop-filter: blur(20px);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 1.6cqw;
+  font-size: 1.35cqw; color: var(--ink);
+  z-index: 5;
+}
+.menubar .left { display: flex; gap: 1.8cqw; align-items: center; }
+.menubar .left b { font-weight: 600; }
+.menubar .right { display: flex; gap: 1.1cqw; align-items: center; }
+.menubar .sys { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* pills */
+.pill {
+  display: inline-flex; align-items: center; gap: 0.6cqw;
+  height: 2.6cqw; padding: 0 0.9cqw;
+  background: #000; border-radius: 99px;
+  border: 0.12cqw solid var(--brand);
+  font-size: 1.15cqw; white-space: nowrap;
+  transition: padding .45s ease, gap .45s ease;
+}
+.pill.vs { --brand: var(--vscode); }
+.pill.cc { --brand: var(--claude); }
+.pill .icon { color: var(--brand); font-family: var(--mono); font-weight: 500; font-size: 1.2cqw; line-height: 1; }
+.pill .more {
+  display: inline-flex; align-items: center; gap: 0.6cqw;
+  max-width: 0; overflow: hidden; opacity: 0;
+  transition: max-width .5s ease, opacity .4s ease;
+}
+.pill.active .more { max-width: 30cqw; opacity: 1; }
+.dot { width: 0.8cqw; height: 0.8cqw; border-radius: 50%; background: var(--state, var(--green)); flex: none; }
+.pill[data-s="working"] .dot { --state: var(--green); animation: pulse 1.2s ease-in-out infinite; }
+.pill[data-s="approval"] .dot { --state: var(--amber); }
+.pill[data-s="turn"] .dot { --state: var(--green); }
+.pill .proj { color: var(--muted); }
+.pill .time { color: var(--amber); font-variant-numeric: tabular-nums; }
+.pill[data-s="working"] .time { display: none; }
+@keyframes pulse { 50% { opacity: .35; } }
+
+/* cards */
+.card {
+  position: absolute; width: 30cqw;
+  background: var(--card); border-radius: 1.4cqw;
+  border: 0.1cqw solid color-mix(in srgb, var(--brand) 55%, transparent);
+  box-shadow: 0 1.5cqw 4cqw rgba(0,0,0,.55);
+  padding: 1.5cqw 1.7cqw;
+  display: grid; gap: 0.9cqw;
+  opacity: 0; transform: translateY(-1.2cqw) scale(.97);
+  transition: opacity .45s ease, transform .55s cubic-bezier(.2,.9,.25,1.2), top .6s ease;
+  pointer-events: none; z-index: 4;
+}
+.card.show { opacity: 1; transform: none; }
+.card.vs { --brand: var(--vscode); right: 14cqw; top: 5.2cqw; }
+.card.cc { --brand: var(--claude); right: 5cqw; top: 5.2cqw; }
+.card.cc.stacked { top: 23.4cqw; }
+.card .head { display: flex; align-items: center; gap: 0.8cqw; font-size: 1.1cqw; }
+.card .src { color: var(--brand); font-weight: 600; }
+.card .proj { color: var(--muted); margin-left: auto; }
+.card .x {
+  width: 1.7cqw; height: 1.7cqw; border-radius: 50%; background: var(--button);
+  display: grid; place-items: center; color: var(--muted); font-size: 0.9cqw; font-weight: 700;
+  transition: transform .2s, background .2s;
+}
+.card .title { font-family: var(--display); font-weight: 600; font-size: 1.75cqw; letter-spacing: -0.01em; color: var(--ink); }
+.card .title em { font-style: normal; color: var(--amber); }
+.card .title em.g { color: var(--green); }
+.card .sub { font-size: 1.15cqw; color: var(--body); }
+.card .sub code { font-family: var(--mono); font-size: 1.05cqw; background: #222; padding: 0.1cqw 0.45cqw; border-radius: 0.4cqw; }
+.card .meta { font-size: 1cqw; color: var(--muted); font-variant-numeric: tabular-nums; }
+.card .btns { display: flex; gap: 0.7cqw; margin-top: 0.3cqw; }
+.card .btn {
+  flex: 1; text-align: center; padding: 0.75cqw 0; border-radius: 0.8cqw;
+  background: var(--button); color: var(--ink); font-size: 1.1cqw; font-weight: 500;
+  transition: transform .15s, background .2s;
+}
+.card .btn.primary { background: var(--brand); color: #fff; }
+.press { transform: scale(.92) !important; filter: brightness(1.25); }
+
+/* cursor */
+.cursor {
+  position: absolute; width: 2cqw; height: 2cqw; z-index: 9;
+  left: 60cqw; top: 40cqw; opacity: 0;
+  transition: left .9s cubic-bezier(.5,0,.2,1), top .9s cubic-bezier(.5,0,.2,1), opacity .3s;
+  filter: drop-shadow(0 .2cqw .4cqw rgba(0,0,0,.6));
+}
+.cursor.on { opacity: 1; }
+
+/* editor windows in the background */
+.win {
+  position: absolute; border-radius: 1cqw; overflow: hidden;
+  background: #1a1b1e; box-shadow: 0 2cqw 5cqw rgba(0,0,0,.45);
+  border: 0.08cqw solid rgba(255,255,255,.07);
+  transition: opacity .6s, filter .6s;
+}
+.win .tb { height: 2.4cqw; background: #222327; display: flex; align-items: center; gap: .6cqw; padding: 0 1cqw; font-size: 1cqw; color: var(--muted); }
+.win .tb i { width: .9cqw; height: .9cqw; border-radius: 50%; background: #3a3b40; }
+.win .body { padding: 1.4cqw; display: grid; gap: .8cqw; font-family: var(--mono); font-size: 1.05cqw; color: var(--faint); }
+.win .body .ln { height: .9cqw; border-radius: .3cqw; background: #2a2b30; }
+.win.a { left: 4cqw; top: 9cqw; width: 46cqw; height: 34cqw; }
+.win.b { left: 12cqw; top: 20cqw; width: 40cqw; height: 28cqw; }
+.stage.dim .win { filter: blur(.25cqw) brightness(.6); }
+
+/* captions */
+.caption {
+  position: absolute; left: 4cqw; bottom: 4cqw; width: 52cqw; z-index: 6;
+  display: grid; gap: .8cqw;
+}
+.caption .kicker { font-family: var(--mono); font-size: 1.05cqw; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.caption h2 {
+  margin: 0; font-family: var(--display); font-weight: 700; font-size: 3.6cqw;
+  line-height: 1.08; letter-spacing: -0.025em; text-wrap: balance;
+}
+.caption h2 .vs { color: var(--vscode); }
+.caption h2 .cc { color: var(--claude); }
+.caption h2 .amb { color: var(--amber); }
+.caption p { margin: 0; font-size: 1.45cqw; color: var(--body); max-width: 44cqw; line-height: 1.45; }
+.caption > * { transition: opacity .45s ease, transform .55s ease; }
+.caption.swap > * { opacity: 0; transform: translateY(1cqw); }
+
+/* title + outro overlays */
+.overlay {
+  position: absolute; inset: 0; z-index: 8;
+  display: grid; place-content: center; text-align: center; gap: 1.6cqw;
+  background: radial-gradient(70% 70% at 50% 50%, rgba(11,12,14,.86), rgba(11,12,14,.97));
+  opacity: 0; pointer-events: none; transition: opacity .7s ease;
+}
+.overlay.show { opacity: 1; }
+.overlay .logos { display: flex; gap: 1.4cqw; justify-content: center; }
+.overlay .logos .pill { height: 4.4cqw; font-size: 2cqw; padding: 0 1.6cqw; gap: 1cqw; }
+.overlay .logos .pill .icon { font-size: 2.1cqw; }
+.overlay h1 {
+  margin: 0; font-family: var(--display); font-weight: 700; font-size: 6cqw;
+  letter-spacing: -0.035em; line-height: 1;
+}
+.overlay h1 span { color: var(--amber); }
+.overlay p { margin: 0 auto; font-size: 1.7cqw; color: var(--body); max-width: 56cqw; line-height: 1.45; text-wrap: balance; }
+.facts { display: flex; gap: 1.2cqw; justify-content: center; flex-wrap: wrap; margin-top: .6cqw; }
+.facts span {
+  font-family: var(--mono); font-size: 1.2cqw; color: var(--body);
+  border: .08cqw solid #34332f; border-radius: 99px; padding: .5cqw 1.2cqw;
+}
+
+/* ---------- transport ---------- */
+.transport { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.transport button {
+  font: 500 14px/1 var(--text); color: var(--ink);
+  background: #1d1e22; border: 1px solid #2e2f34; border-radius: 99px;
+  padding: 10px 16px; cursor: pointer;
+}
+.transport button:hover { background: #26272c; }
+.transport button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.track { flex: 1 1 200px; min-width: 0; height: 6px; background: #1d1e22; border-radius: 99px; overflow: hidden; cursor: pointer; position: relative; }
+.track .fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--vscode), var(--claude)); }
+.clock { font: 500 13px/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.chapters { display: flex; flex-wrap: wrap; gap: 8px; }
+.chapters button {
+  font: 500 12px/1 var(--text); color: var(--muted);
+  background: transparent; border: 1px solid #2a2b30; border-radius: 99px; padding: 7px 11px; cursor: pointer;
+}
+.chapters button.on { color: var(--ink); border-color: var(--amber); }
+.chapters button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.note { font-size: 13px; color: var(--faint); margin: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0s !important; animation: none !important; }
+}
+</style>
+
+<div class="wrap">
+  <div class="stage" id="stage" aria-label="Animerad demo av AgentPill och ClaudePill i Macens menyrad" role="img">
+    <div class="menubar">
+      <div class="left"><b></b><b>Code</b><span>File</span><span>Edit</span><span>View</span><span>Window</span></div>
+      <div class="right">
+        <span class="pill vs" id="pillVs" data-s="idle">
+          <span class="icon">&lt;/&gt;</span>
+          <span class="more"><span class="dot"></span><span class="lbl">Arbetar</span><span class="proj">my-app</span><span class="time">0:42</span></span>
+        </span>
+        <span class="pill cc" id="pillCc" data-s="idle">
+          <span class="icon">✱</span>
+          <span class="more"><span class="dot"></span><span class="lbl">Arbetar</span><span class="proj">claude-widget</span><span class="time">0:08</span></span>
+        </span>
+        <span class="sys">Ons 19 nov&nbsp; 14:32</span>
+      </div>
+    </div>
+
+    <div class="win a"><div class="tb"><i></i><i></i><i></i>&nbsp;Agents — my-app</div>
+      <div class="body"><div class="ln" style="width:70%"></div><div class="ln" style="width:52%"></div><div class="ln" style="width:84%"></div><div class="ln" style="width:40%"></div><div class="ln" style="width:63%"></div></div></div>
+    <div class="win b"><div class="tb"><i></i><i></i><i></i>&nbsp;Claude — claude-widget</div>
+      <div class="body"><div class="ln" style="width:58%"></div><div class="ln" style="width:76%"></div><div class="ln" style="width:44%"></div><div class="ln" style="width:68%"></div></div></div>
+
+    <div class="card vs" id="cardVs">
+      <div class="head"><span class="src">VS Code · Copilot</span><span class="proj">my-app</span><span class="x" id="xVs">✕</span></div>
+      <div class="title" id="vsTitle">Väntar på <em>godkännande</em></div>
+      <div class="sub" id="vsSub">Vill köra <code>npm run build</code></div>
+      <div class="meta" id="vsMeta">Väntat 0:42</div>
+      <div class="btns"><span class="btn primary" id="openVs">Öppna VS Code</span><span class="btn" id="snoozeVs">Påminn om 5 min</span></div>
+    </div>
+    <div class="card cc" id="cardCc">
+      <div class="head"><span class="src">Claude Code</span><span class="proj">claude-widget</span><span class="x" id="xCc">✕</span></div>
+      <div class="title">Svaret är klart – <em class="g">din tur</em></div>
+      <div class="sub">Claude har en fråga om nästa steg</div>
+      <div class="meta">Väntat 0:08</div>
+      <div class="btns"><span class="btn primary">Öppna Claude</span><span class="btn">Påminn om 5 min</span></div>
+    </div>
+
+    <svg class="cursor" id="cursor" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 2l16 10.5-7 1.3 4.2 7.6-2.9 1.6-4.2-7.7L4 20z" fill="#fff" stroke="#000" stroke-width="1.2" stroke-linejoin="round"/></svg>
+
+    <div class="caption" id="caption">
+      <div class="kicker" id="capK">Kapitel</div>
+      <h2 id="capH">Rubrik</h2>
+      <p id="capP">Text</p>
+    </div>
+
+    <div class="overlay show" id="intro">
+      <div class="logos">
+        <span class="pill vs"><span class="icon">&lt;/&gt;</span></span>
+        <span class="pill cc"><span class="icon">✱</span></span>
+      </div>
+      <h1>Agenten väntar.<br><span>Nu vet du det.</span></h1>
+      <p>AgentPill och ClaudePill bor i menyraden och säger till när VS Code Copilot eller Claude Code behöver dig.</p>
+    </div>
+
+    <div class="overlay" id="outro">
+      <div class="logos">
+        <span class="pill vs active" data-s="turn"><span class="icon">&lt;/&gt;</span><span class="more"><span class="dot"></span><span>AgentPill</span></span></span>
+        <span class="pill cc active" data-s="turn"><span class="icon">✱</span><span class="more"><span class="dot"></span><span>ClaudePill</span></span></span>
+      </div>
+      <h1>Sluta vakta.<br><span>Börja bygga.</span></h1>
+      <p>Allt sker lokalt på din Mac, utan AI och utan moln. Startar automatiskt när du loggar in.</p>
+      <div class="facts"><span>127.0.0.1:47823</span><span>127.0.0.1:47824</span><span>PreToolUse · Stop · Notification</span></div>
+    </div>
+  </div>
+
+  <div class="transport">
+    <button id="play" type="button">Pausa</button>
+    <button id="replay" type="button">Spela från början</button>
+    <div class="track" id="track" role="slider" aria-label="Tidslinje" aria-valuemin="0" aria-valuemax="34" aria-valuenow="0" tabindex="0"><div class="fill" id="fill"></div></div>
+    <span class="clock" id="clock">0:00 / 0:34</span>
+  </div>
+  <div class="chapters" id="chapters"></div>
+  <p class="note">Demo med exempeldata. Projektnamn och kommandon är påhittade.</p>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const stage = $("stage"), pillVs = $("pillVs"), pillCc = $("pillCc");
+  const cardVs = $("cardVs"), cardCc = $("cardCc"), cursor = $("cursor");
+  const cap = $("caption"), intro = $("intro"), outro = $("outro");
+
+  // Cursor targets, in % of the stage (cqw-ish: x of width, y of height).
+  const pos = (el) => {
+    const s = stage.getBoundingClientRect(), r = el.getBoundingClientRect();
+    return { x: (r.left + r.width / 2 - s.left) / s.width * 100, y: (r.top + r.height / 2 - s.top) / s.width * 100 };
+  };
+  const moveCursor = (el) => { const p = pos(el); cursor.style.left = (p.x - 0.4) + "cqw"; cursor.style.top = (p.y - 0.4) + "cqw"; };
+  const press = (el) => { el.classList.add("press"); setTimeout(() => el.classList.remove("press"), 220); };
+
+  const setPill = (pill, s, label, time) => {
+    pill.dataset.s = s;
+    pill.classList.toggle("active", s !== "idle");
+    if (label) pill.querySelector(".lbl").textContent = label;
+    if (time) pill.querySelector(".time").textContent = time;
+  };
+  const setCaption = (k, h, p) => {
+    cap.classList.add("swap");
+    setTimeout(() => { $("capK").textContent = k; $("capH").innerHTML = h; $("capP").textContent = p; cap.classList.remove("swap"); }, 260);
+  };
+  const reset = () => {
+    setPill(pillVs, "idle"); setPill(pillCc, "idle");
+    [cardVs, cardCc].forEach(c => c.classList.remove("show"));
+    cardCc.classList.remove("stacked");
+    cursor.classList.remove("on");
+    stage.classList.remove("dim");
+    intro.classList.add("show"); outro.classList.remove("show");
+    $("vsTitle").innerHTML = 'Väntar på <em>godkännande</em>';
+    $("vsSub").innerHTML = 'Vill köra <code>npm run build</code>';
+    $("vsMeta").textContent = "Väntat 0:42";
+  };
+
+  // Scenes: [start s, chapter name, action]
+  const scenes = [
+    [0, "Intro", () => { reset(); setCaption("", "", ""); }],
+    [4, "Viloläge", () => {
+      intro.classList.remove("show");
+      setCaption("Menyraden", 'Två små piller. <span class="vs">Blått</span> för VS Code, <span class="cc">orange</span> för Claude Code.', "När inget händer syns bara ikonen. Du märker dem knappt.");
+    }],
+    [9, "Arbetar", () => {
+      setPill(pillVs, "working", "Arbetar"); setPill(pillCc, "working", "Arbetar");
+      setCaption("Agenten jobbar", "Pillret visar status, projekt och tid.", "Hooks i VS Code och Claude Code skickar händelser lokalt till appen medan agenten arbetar.");
+    }],
+    [14, "Godkännande", () => {
+      setPill(pillVs, "approval", "Väntar på godkännande", "0:42");
+      stage.classList.add("dim");
+      cardVs.classList.add("show");
+      setCaption("Copilot behöver dig", 'Kortet fälls ut av sig självt och <span class="amb">stannar kvar</span>.', "Du ser exakt vad agenten vill göra. Kortet försvinner inte om du klickar någon annanstans.");
+    }],
+    [19, "Två agenter", () => {
+      setPill(pillCc, "turn", "Din tur", "0:08");
+      cardCc.classList.add("show");
+      setTimeout(() => cardCc.classList.add("stacked"), 350);
+      setCaption("Flera sessioner", "Korten lägger sig under varandra.", "ClaudePill ser AgentPill-kortet och flyttar sig nedåt så att inget täcks över.");
+    }],
+    [24, "Öppna", () => {
+      cursor.classList.add("on"); moveCursor($("openVs"));
+      setTimeout(() => press($("openVs")), 950);
+      setTimeout(() => { cardVs.classList.remove("show"); cardCc.classList.remove("stacked"); setPill(pillVs, "working", "Arbetar"); }, 1250);
+      setCaption("Ett klick", "Öppna VS Code tar dig direkt till Agents-fönstret.", "Kortet stängs. Svarar du inte kommer det tillbaka om 5 minuter.");
+    }],
+    [28, "Stäng", () => {
+      moveCursor($("xCc"));
+      setTimeout(() => press($("xCc")), 950);
+      setTimeout(() => { cardCc.classList.remove("show"); stage.classList.remove("dim"); cursor.classList.remove("on"); }, 1250);
+      setCaption("Inte nu?", "Kryssa bort kortet.", "Om du fortfarande väntas efter 2 minuter visas det igen. Pillret fortsätter att visa din tur.");
+    }],
+    [31, "Outro", () => { outro.classList.add("show"); setCaption("", "", ""); }],
+  ];
+  const total = 34;
+
+  // Chapter buttons
+  const chapWrap = $("chapters");
+  scenes.forEach(([t, name], i) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = name; b.id = "chap-" + i;
+    b.addEventListener("click", () => seek(t));
+    chapWrap.appendChild(b);
+  });
+
+  let t = 0, playing = true, last = performance.now(), sceneIdx = -1;
+  const fmt = s => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
+
+  function runScene(i) {
+    sceneIdx = i;
+    scenes[i][2]();
+    chapWrap.querySelectorAll("button").forEach((b, j) => b.classList.toggle("on", j === i));
+  }
+  function seek(s) {
+    t = Math.max(0, Math.min(total - 0.01, s));
+    // Rebuild state by replaying every scene up to the target, instantly.
+    reset();
+    let idx = 0;
+    scenes.forEach(([st], i) => { if (st <= t) idx = i; });
+    for (let i = 0; i <= idx; i++) scenes[i][2]();
+    runScene(idx);
+    if (!playing) togglePlay();
+  }
+  function togglePlay() {
+    playing = !playing;
+    $("play").textContent = playing ? "Pausa" : "Spela";
+    last = performance.now();
+  }
+  function frame(now) {
+    if (playing) {
+      t += (now - last) / 1000;
+      if (t >= total) { t = 0; reset(); sceneIdx = -1; }
+      const next = sceneIdx + 1;
+      if (next < scenes.length && t >= scenes[next][0]) runScene(next);
+    }
+    last = now;
+    $("fill").style.width = (t / total * 100) + "%";
+    $("clock").textContent = fmt(t) + " / " + fmt(total);
+    $("track").setAttribute("aria-valuenow", Math.floor(t));
+    requestAnimationFrame(frame);
+  }
+
+  $("play").addEventListener("click", togglePlay);
+  $("replay").addEventListener("click", () => seek(0));
+  $("track").addEventListener("click", e => {
+    const r = e.currentTarget.getBoundingClientRect();
+    seek((e.clientX - r.left) / r.width * total);
+  });
+  $("track").addEventListener("keydown", e => {
+    if (e.key === "ArrowRight") seek(t + 3);
+    if (e.key === "ArrowLeft") seek(t - 3);
+  });
+
+  runScene(0);
+  requestAnimationFrame(frame);
+})();
+</script>

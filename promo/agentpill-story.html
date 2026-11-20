@@ -1,0 +1,595 @@
+<title>AgentPill Workday</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: one 16:9 Mac desktop that plays a 52 s story: reading a doc, Copilot asks, VS Code, Claude Code finishes, back to the doc. Transport below. Single dark look, by choice. */
+:root {
+  color-scheme: dark;
+  --page: #0b0c0e;
+  --bar: rgba(22, 22, 24, 0.78);
+  --card: #141414;
+  --ink: #f3f2ee;
+  --body: #d3d1c7;
+  --muted: #b4b2a9;
+  --faint: #6f6d66;
+  --vscode: #007acc;
+  --claude: #d97757;
+  --amber: #ef9f27;
+  --green: #1d9e75;
+  --button: #262624;
+  --paper: #fbfaf7;
+  --paper-ink: #22211e;
+  --paper-muted: #6b6860;
+  --doc-accent: #2f5bd3;
+  --editor: #1e1e1e;
+  --editor-side: #252526;
+  --chat: #262624;
+  --chat-panel: #1f1e1c;
+  --display: "Sora", "Avenir Next", system-ui, sans-serif;
+  --text: "Inter", -apple-system, system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --serif: "Source Serif 4", Georgia, serif;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--page); color: var(--ink); font-family: var(--text);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 48px;
+}
+.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 16px; }
+
+.stage {
+  position: relative; width: 100%; max-width: 100%; aspect-ratio: 16 / 9;
+  border-radius: 14px; overflow: hidden; container-type: inline-size;
+  background:
+    radial-gradient(55% 75% at 10% 100%, #2c1f1b, transparent 70%),
+    radial-gradient(65% 90% at 95% 5%, #1a2535, transparent 70%),
+    #111317;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 30px 80px rgba(0,0,0,0.5);
+}
+
+/* menu bar */
+.menubar {
+  position: absolute; inset: 0 0 auto 0; height: 3.6cqw; z-index: 6;
+  background: var(--bar); backdrop-filter: blur(20px);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 1.5cqw; font-size: 1.15cqw;
+}
+.menubar .left { display: flex; gap: 1.6cqw; align-items: center; }
+.menubar .left b { font-weight: 600; }
+.menubar .right { display: flex; gap: 0.9cqw; align-items: center; }
+.menubar .sys { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.pill {
+  display: inline-flex; align-items: center; gap: 0.5cqw;
+  height: 2.3cqw; padding: 0 0.8cqw; background: #000; border-radius: 99px;
+  border: 0.11cqw solid var(--brand); font-size: 1cqw; white-space: nowrap;
+}
+.pill.vs { --brand: var(--vscode); }
+.pill.cc { --brand: var(--claude); }
+.pill .icon { color: var(--brand); font-family: var(--mono); font-weight: 500; font-size: 1.05cqw; line-height: 1; }
+.pill .more { display: inline-flex; align-items: center; gap: 0.5cqw; max-width: 0; overflow: hidden; opacity: 0; transition: max-width .5s ease, opacity .4s ease; }
+.pill.active .more { max-width: 30cqw; opacity: 1; }
+.dot { width: 0.7cqw; height: 0.7cqw; border-radius: 50%; background: var(--state, var(--green)); flex: none; }
+.pill[data-s="working"] .dot { animation: pulse 1.2s ease-in-out infinite; }
+.pill[data-s="approval"] .dot { --state: var(--amber); }
+.pill .proj { color: var(--muted); }
+.pill .time { color: var(--amber); font-variant-numeric: tabular-nums; }
+.pill[data-s="working"] .time { display: none; }
+.pill.ping { animation: ping .9s ease-out 2; }
+@keyframes pulse { 50% { opacity: .35; } }
+@keyframes ping { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--brand) 70%, transparent); } 100% { box-shadow: 0 0 0 1.2cqw transparent; } }
+
+/* generic window */
+.win {
+  position: absolute; border-radius: 1cqw; overflow: hidden;
+  box-shadow: 0 2cqw 5cqw rgba(0,0,0,.5); border: 0.08cqw solid rgba(255,255,255,.08);
+  opacity: 0; transform: scale(.96) translateY(1cqw);
+  transition: opacity .5s ease, transform .55s cubic-bezier(.2,.9,.25,1), filter .5s;
+  display: flex; flex-direction: column;
+}
+.win.show { opacity: 1; transform: none; }
+.win.back { filter: brightness(.55) blur(.15cqw); }
+.tb { height: 2.4cqw; flex: none; display: flex; align-items: center; gap: .55cqw; padding: 0 1cqw; font-size: .95cqw; }
+.tb i { width: .85cqw; height: .85cqw; border-radius: 50%; background: #ff5f57; }
+.tb i:nth-child(2) { background: #febc2e; } .tb i:nth-child(3) { background: #28c840; }
+.tb .t { margin-left: .8cqw; flex: 1; text-align: center; padding-right: 4cqw; }
+
+/* browser + document */
+.browser { left: 6cqw; top: 5.2cqw; width: 88cqw; height: 49cqw; background: #dedcd6; z-index: 1; }
+.browser .tb { background: #e9e7e1; color: #444; }
+.url { margin: 0 auto; width: 46cqw; background: #fff; border-radius: .6cqw; padding: .35cqw 1cqw; color: #555; font-size: .95cqw; text-align: center; }
+.toolbar { flex: none; height: 2.6cqw; background: #f4f3ef; border-bottom: .08cqw solid #dcdad3; display: flex; align-items: center; gap: 1.4cqw; padding: 0 2cqw; color: #555; font-size: .95cqw; }
+.toolbar b { color: var(--doc-accent); font-weight: 600; }
+.toolbar .sep { width: .08cqw; height: 1.4cqw; background: #d0cec7; }
+.docscroll { flex: 1; overflow: hidden; display: grid; justify-items: center; padding-top: 2cqw; }
+.paper {
+  width: 52cqw; background: var(--paper); color: var(--paper-ink); box-shadow: 0 .3cqw 1.2cqw rgba(0,0,0,.12);
+  padding: 4cqw 5cqw; font-family: var(--serif); transition: transform 3.5s ease-in-out;
+}
+.paper h3 { margin: 0 0 .4cqw; font-size: 2.2cqw; font-weight: 600; letter-spacing: -0.01em; }
+.paper .by { font-family: var(--text); font-size: .9cqw; color: var(--paper-muted); margin-bottom: 1.8cqw; }
+.paper h4 { font-size: 1.35cqw; margin: 1.6cqw 0 .6cqw; font-weight: 600; }
+.paper p { margin: 0 0 1cqw; font-size: 1.15cqw; line-height: 1.6; }
+.paper mark { background: #fde9a8; color: inherit; }
+.paper.scrolled { transform: translateY(-14cqw); }
+
+/* editor */
+.editor { left: 4cqw; top: 5cqw; width: 70cqw; height: 46cqw; background: var(--editor); z-index: 2; }
+.editor .tb { background: #323233; color: var(--muted); }
+.ed { flex: 1; display: grid; grid-template-columns: 3.2cqw 14cqw 1fr 22cqw; min-height: 0; }
+.activity { background: #333; display: grid; align-content: start; gap: 1.6cqw; padding-top: 1.4cqw; justify-items: center; color: #858585; font-size: 1.3cqw; }
+.tree { background: var(--editor-side); padding: 1cqw; font-size: .9cqw; color: #ccc; display: grid; align-content: start; gap: .45cqw; }
+.tree .h { color: #999; font-size: .78cqw; letter-spacing: .1em; text-transform: uppercase; margin-bottom: .4cqw; }
+.tree .on { color: #fff; background: #37373d; margin: 0 -1cqw; padding: .15cqw 1cqw; }
+.code { display: flex; flex-direction: column; min-width: 0; }
+.tabs { flex: none; height: 2.2cqw; background: #252526; display: flex; font-size: .9cqw; }
+.tabs span { padding: .55cqw 1.2cqw; color: #999; }
+.tabs span.on { background: var(--editor); color: #fff; border-top: .12cqw solid var(--vscode); }
+.lines { flex: 1; padding: 1cqw 0; font-family: var(--mono); font-size: .92cqw; line-height: 1.75; color: #d4d4d4; overflow: hidden; }
+.lines div { padding: 0 1.2cqw; white-space: pre; }
+.lines .n { display: inline-block; width: 2.2cqw; color: #6e7681; }
+.lines .add { background: rgba(35,134,54,.22); }
+.lines .add .n { color: #3fb950; }
+.k { color: #569cd6; } .s { color: #ce9178; } .f { color: #dcdcaa; } .ty { color: #4ec9b0; } .c { color: #6a9955; }
+.term { flex: none; height: 0; overflow: hidden; background: #181818; border-top: .08cqw solid #333; font-family: var(--mono); font-size: .88cqw; color: #ccc; padding: 0 1.2cqw; transition: height .5s ease, padding .5s ease; }
+.term.open { height: 8cqw; padding: .8cqw 1.2cqw; }
+.term .ok { color: #3fb950; }
+.term div { opacity: 0; transition: opacity .3s; }
+.term div.v { opacity: 1; }
+.agent { background: var(--editor-side); border-left: .08cqw solid #333; padding: 1.1cqw; display: grid; align-content: start; gap: .9cqw; font-size: .92cqw; color: #ccc; }
+.agent .h { color: #fff; font-weight: 600; font-size: .95cqw; display: flex; justify-content: space-between; }
+.agent .msg { background: #2d2d30; border-radius: .6cqw; padding: .8cqw; line-height: 1.5; }
+.agent .ask { border: .1cqw solid var(--amber); background: rgba(239,159,39,.08); border-radius: .6cqw; padding: .8cqw; display: grid; gap: .6cqw; transition: opacity .4s, border-color .4s; }
+.agent .ask code { font-family: var(--mono); background: #1b1b1b; padding: .1cqw .4cqw; border-radius: .3cqw; }
+.agent .ask .row { display: flex; gap: .5cqw; }
+.agent .ask .b { padding: .4cqw .9cqw; border-radius: .4cqw; background: #3a3d41; color: #fff; font-size: .88cqw; transition: transform .15s; }
+.agent .ask .b.p { background: var(--vscode); }
+.agent .ask.done { border-color: #3fb950; background: rgba(63,185,80,.08); }
+.agent .status { color: var(--muted); }
+
+/* claude chat */
+.chatwin { left: 14cqw; top: 6.5cqw; width: 64cqw; height: 44cqw; background: var(--chat); z-index: 3; }
+.chatwin .tb { background: #1f1e1c; color: var(--muted); }
+.cw { flex: 1; display: grid; grid-template-columns: 15cqw 1fr; min-height: 0; }
+.cside { background: var(--chat-panel); padding: 1.2cqw; display: grid; align-content: start; gap: .5cqw; font-size: .9cqw; color: var(--muted); }
+.cside .h { color: #8a877f; font-size: .78cqw; letter-spacing: .1em; text-transform: uppercase; margin: .2cqw 0 .3cqw; }
+.cside .s { padding: .45cqw .6cqw; border-radius: .5cqw; display: flex; align-items: center; gap: .5cqw; }
+.cside .s.on { background: #34322e; color: var(--ink); }
+.cside .s .d { width: .55cqw; height: .55cqw; border-radius: 50%; background: #5a5852; }
+.cside .s.on .d { background: var(--claude); }
+.cmain { display: flex; flex-direction: column; padding: 1.6cqw 2.4cqw; gap: 1.1cqw; min-width: 0; }
+.cmain .who { display: flex; align-items: center; gap: .6cqw; color: var(--claude); font-weight: 600; font-size: .95cqw; }
+.cmain .bubble { font-size: 1.1cqw; line-height: 1.6; color: var(--body); }
+.cmain .bubble code { font-family: var(--mono); font-size: .95cqw; background: #1c1b19; padding: .1cqw .4cqw; border-radius: .3cqw; }
+.cmain ul { margin: .4cqw 0 0; padding-left: 1.4cqw; }
+.cmain .user { align-self: flex-end; background: #3a3833; color: var(--ink); padding: .7cqw 1.1cqw; border-radius: 1cqw; font-size: 1.05cqw; opacity: 0; transform: translateY(.6cqw); transition: opacity .35s, transform .35s; }
+.cmain .user.v { opacity: 1; transform: none; }
+.cmain .input { margin-top: auto; border: .1cqw solid #45423c; border-radius: 1cqw; padding: .9cqw 1.1cqw; font-size: 1.05cqw; color: var(--ink); min-height: 3cqw; }
+.cmain .input .ph { color: #77746c; }
+.caret { display: inline-block; width: .1cqw; height: 1.1cqw; background: var(--ink); vertical-align: middle; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* cards */
+.card {
+  position: absolute; width: 27cqw; z-index: 7;
+  background: var(--card); border-radius: 1.2cqw;
+  border: .1cqw solid color-mix(in srgb, var(--brand) 55%, transparent);
+  box-shadow: 0 1.5cqw 4cqw rgba(0,0,0,.6);
+  padding: 1.3cqw 1.5cqw; display: grid; gap: .75cqw;
+  opacity: 0; transform: translateY(-1.2cqw) scale(.97);
+  transition: opacity .45s ease, transform .55s cubic-bezier(.2,.9,.25,1.2);
+}
+.card.show { opacity: 1; transform: none; }
+.card.vs { --brand: var(--vscode); right: 11cqw; top: 4.3cqw; }
+.card.cc { --brand: var(--claude); right: 4cqw; top: 4.3cqw; }
+.card .head { display: flex; align-items: center; gap: .7cqw; font-size: .95cqw; }
+.card .src { color: var(--brand); font-weight: 600; }
+.card .proj { color: var(--muted); margin-left: auto; }
+.card .x { width: 1.5cqw; height: 1.5cqw; border-radius: 50%; background: var(--button); display: grid; place-items: center; color: var(--muted); font-size: .8cqw; font-weight: 700; }
+.card .title { font-family: var(--display); font-weight: 600; font-size: 1.55cqw; letter-spacing: -0.01em; }
+.card .title em { font-style: normal; color: var(--amber); }
+.card .title em.g { color: var(--green); }
+.card .sub { font-size: 1cqw; color: var(--body); }
+.card .sub code { font-family: var(--mono); font-size: .92cqw; background: #222; padding: .1cqw .4cqw; border-radius: .35cqw; }
+.card .meta { font-size: .9cqw; color: var(--muted); font-variant-numeric: tabular-nums; }
+.card .btns { display: flex; gap: .6cqw; margin-top: .2cqw; }
+.card .btn { flex: 1; text-align: center; padding: .65cqw 0; border-radius: .7cqw; background: var(--button); font-size: .98cqw; font-weight: 500; transition: transform .15s; }
+.card .btn.primary { background: var(--brand); color: #fff; }
+.press { transform: scale(.9) !important; filter: brightness(1.3); }
+
+.cursor { position: absolute; width: 1.8cqw; height: 1.8cqw; z-index: 9; left: 60cqw; top: 30cqw; opacity: 0;
+  transition: left .9s cubic-bezier(.5,0,.2,1), top .9s cubic-bezier(.5,0,.2,1), opacity .3s;
+  filter: drop-shadow(0 .2cqw .4cqw rgba(0,0,0,.6)); }
+.cursor.on { opacity: 1; }
+
+/* subtitles */
+.sub-line {
+  position: absolute; left: 50%; bottom: 2.2cqw; transform: translateX(-50%); z-index: 8;
+  max-width: 70cqw; text-align: center;
+  background: rgba(10,10,12,.82); backdrop-filter: blur(10px);
+  border-radius: 99px; padding: .8cqw 2cqw;
+  font-size: 1.35cqw; color: var(--ink); line-height: 1.35;
+  transition: opacity .35s ease;
+}
+.sub-line.hide { opacity: 0; }
+.sub-line b { color: var(--amber); font-weight: 600; }
+
+/* intro / outro */
+.overlay {
+  position: absolute; inset: 0; z-index: 10; display: grid; place-content: center; text-align: center; gap: 1.6cqw;
+  background: radial-gradient(70% 70% at 50% 50%, rgba(11,12,14,.88), rgba(11,12,14,.97));
+  opacity: 0; pointer-events: none; transition: opacity .7s ease;
+}
+.overlay.show { opacity: 1; }
+.overlay .logos { display: flex; gap: 1.4cqw; justify-content: center; }
+.overlay .logos .pill { height: 4.2cqw; font-size: 1.9cqw; padding: 0 1.5cqw; gap: 1cqw; }
+.overlay .logos .pill .icon { font-size: 2cqw; }
+.overlay h1 { margin: 0; font-family: var(--display); font-weight: 700; font-size: 5.6cqw; letter-spacing: -0.035em; line-height: 1.02; }
+.overlay h1 span { color: var(--amber); }
+.overlay p { margin: 0 auto; font-size: 1.6cqw; color: var(--body); max-width: 56cqw; line-height: 1.45; text-wrap: balance; }
+
+/* transport */
+.transport { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.transport button { font: 500 14px/1 var(--text); color: var(--ink); background: #1d1e22; border: 1px solid #2e2f34; border-radius: 99px; padding: 10px 16px; cursor: pointer; }
+.transport button:hover { background: #26272c; }
+.transport button:focus-visible, .chapters button:focus-visible, .track:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.track { flex: 1 1 200px; min-width: 0; height: 6px; background: #1d1e22; border-radius: 99px; overflow: hidden; cursor: pointer; }
+.track .fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--vscode), var(--claude)); }
+.clock { font: 500 13px/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.chapters { display: flex; flex-wrap: wrap; gap: 8px; }
+.chapters button { font: 500 12px/1 var(--text); color: var(--muted); background: transparent; border: 1px solid #2a2b30; border-radius: 99px; padding: 7px 11px; cursor: pointer; }
+.chapters button.on { color: var(--ink); border-color: var(--amber); }
+.note { font-size: 13px; color: var(--faint); margin: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0s !important; animation: none !important; }
+}
+</style>
+
+<div class="wrap">
+  <div class="stage" id="stage" role="img" aria-label="Animerad berättelse: du läser ett dokument, Copilot ber om godkännande, du öppnar VS Code, Claude Code blir klar, du går tillbaka till dokumentet">
+    <div class="menubar">
+      <div class="left"><b></b><b id="appName">Webbläsare</b><span>Arkiv</span><span>Redigera</span><span>Visa</span><span>Fönster</span></div>
+      <div class="right">
+        <span class="pill vs" id="pillVs" data-s="idle"><span class="icon">&lt;/&gt;</span><span class="more"><span class="dot"></span><span class="lbl">Arbetar</span><span class="proj">kundportal</span><span class="time">0:04</span></span></span>
+        <span class="pill cc" id="pillCc" data-s="idle"><span class="icon">✱</span><span class="more"><span class="dot"></span><span class="lbl">Arbetar</span><span class="proj">export-api</span><span class="time">0:02</span></span></span>
+        <span class="sys">Ons 19 nov&nbsp; 10:14</span>
+      </div>
+    </div>
+
+    <!-- Browser with a document -->
+    <div class="win browser show" id="browser">
+      <div class="tb"><i></i><i></i><i></i><span class="url">docs.exempel.se/kundportal-q1-plan</span></div>
+      <div class="toolbar"><b>Dokument</b><span class="sep"></span><span>Arkiv</span><span>Redigera</span><span>Infoga</span><span>Format</span><span class="sep"></span><span>Normal text</span><span>11</span><span><b style="color:#555">B</b>&nbsp; <i>I</i>&nbsp; <u>U</u></span></div>
+      <div class="docscroll"><div class="paper" id="paper">
+        <h3>Kundportal: plan för Q1</h3>
+        <div class="by">Senast ändrad i dag 09:58 · 6 min läsning</div>
+        <h4>1. Bakgrund</h4>
+        <p>Kunderna mejlar oss i dag för att få ut sina fakturor som PDF. Under Q1 flyttar vi det till portalen, så att de kan ladda ner allt själva.</p>
+        <p><mark>Målet är att halvera antalet supportärenden om fakturor</mark> innan april, utan att bygga om betalflödet.</p>
+        <h4>2. Leveranser</h4>
+        <p>Export-API för fakturor och kvitton, en ny nedladdningssida i portalen och ett byggsteg som publicerar till staging varje natt.</p>
+        <h4>3. Risker</h4>
+        <p>Stora konton har över 4 000 fakturor. Exporten måste därför ske i bakgrunden och meddela kunden när filen är klar.</p>
+      </div></div>
+    </div>
+
+    <!-- VS Code style editor -->
+    <div class="win editor" id="editor">
+      <div class="tb"><i></i><i></i><i></i><span class="t">invoices.ts — kundportal</span></div>
+      <div class="ed">
+        <div class="activity"><span>▤</span><span>⌕</span><span>⑂</span><span>▷</span></div>
+        <div class="tree"><div class="h">Kundportal</div><div>▸ public</div><div>▾ src</div><div>&nbsp;&nbsp;▸ components</div><div>&nbsp;&nbsp;▾ api</div><div class="on">&nbsp;&nbsp;&nbsp;&nbsp;invoices.ts</div><div>&nbsp;&nbsp;&nbsp;&nbsp;auth.ts</div><div>&nbsp;&nbsp;app.ts</div><div>package.json</div></div>
+        <div class="code">
+          <div class="tabs"><span class="on">invoices.ts</span><span>app.ts</span></div>
+          <div class="lines">
+<div><span class="n">12</span><span class="k">import</span> { <span class="ty">Router</span> } <span class="k">from</span> <span class="s">"express"</span>;</div>
+<div><span class="n">13</span><span class="k">import</span> { <span class="f">renderPdf</span> } <span class="k">from</span> <span class="s">"../pdf"</span>;</div>
+<div><span class="n">14</span></div>
+<div><span class="n">15</span><span class="k">export const</span> invoices = <span class="ty">Router</span>();</div>
+<div><span class="n">16</span></div>
+<div class="add"><span class="n">17</span><span class="c">// Export all invoices for a customer as one PDF</span></div>
+<div class="add"><span class="n">18</span>invoices.<span class="f">get</span>(<span class="s">"/:customerId/export"</span>, <span class="k">async</span> (req, res) =&gt; {</div>
+<div class="add"><span class="n">19</span>  <span class="k">const</span> list = <span class="k">await</span> db.invoices.<span class="f">byCustomer</span>(req.params.customerId);</div>
+<div class="add"><span class="n">20</span>  <span class="k">const</span> pdf = <span class="k">await</span> <span class="f">renderPdf</span>(list);</div>
+<div class="add"><span class="n">21</span>  res.<span class="f">type</span>(<span class="s">"application/pdf"</span>).<span class="f">send</span>(pdf);</div>
+<div class="add"><span class="n">22</span>});</div>
+          </div>
+          <div class="term" id="term">
+            <div id="t1">$ npm run build</div>
+            <div id="t2">&gt; tsc -p . &amp;&amp; vite build</div>
+            <div id="t3"><span class="ok">✓</span> 214 modules transformed · built in 3.8s</div>
+          </div>
+        </div>
+        <div class="agent">
+          <div class="h"><span>Copilot · Agent</span><span style="color:#888">⋯</span></div>
+          <div class="msg">Jag har lagt till en export-route i <code style="font-family:var(--mono)">invoices.ts</code>. Nu bygger jag för att kontrollera att allt kompilerar.</div>
+          <div class="ask" id="ask">
+            <div>Kör kommando i terminalen?</div>
+            <div><code>npm run build</code></div>
+            <div class="row"><span class="b p" id="allow">Tillåt</span><span class="b">Hoppa över</span></div>
+          </div>
+          <div class="status" id="agentStatus">Väntar på dig …</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Claude Code chat -->
+    <div class="win chatwin" id="chat">
+      <div class="tb"><i></i><i></i><i></i><span class="t">Claude — export-api</span></div>
+      <div class="cw">
+        <div class="cside">
+          <div class="h">Sessioner</div>
+          <div class="s on"><span class="d"></span>export-api</div>
+          <div class="s"><span class="d"></span>kundportal-docs</div>
+          <div class="s"><span class="d"></span>staging-deploy</div>
+        </div>
+        <div class="cmain">
+          <div class="who">✱ Claude</div>
+          <div class="bubble">Klart. Bakgrundsexporten är byggd och testad:
+            <ul>
+              <li>Jobbkö för konton med fler än 500 fakturor</li>
+              <li>Mejl till kunden när filen är klar</li>
+              <li><code>npm test</code>: 48 av 48 gröna</li>
+            </ul>
+            Ska jag öppna en PR mot <code>main</code>?
+          </div>
+          <div class="user" id="userMsg">Ja, öppna PR:en. Tack!</div>
+          <div class="input" id="input"><span class="ph">Svara Claude …</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AgentPill / ClaudePill cards -->
+    <div class="card vs" id="cardVs">
+      <div class="head"><span class="src">VS Code · Copilot</span><span class="proj">kundportal</span><span class="x">✕</span></div>
+      <div class="title">Väntar på <em>godkännande</em></div>
+      <div class="sub">Vill köra <code>npm run build</code></div>
+      <div class="meta">Väntat 0:04</div>
+      <div class="btns"><span class="btn primary" id="openVs">Öppna VS Code</span><span class="btn">Påminn om 5 min</span></div>
+    </div>
+    <div class="card cc" id="cardCc">
+      <div class="head"><span class="src">Claude Code</span><span class="proj">export-api</span><span class="x">✕</span></div>
+      <div class="title">Svaret är klart – <em class="g">din tur</em></div>
+      <div class="sub">Bakgrundsexporten är byggd och testad</div>
+      <div class="meta">Väntat 0:02</div>
+      <div class="btns"><span class="btn primary" id="openCc">Öppna Claude</span><span class="btn">Påminn om 5 min</span></div>
+    </div>
+
+    <svg class="cursor" id="cursor" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 2l16 10.5-7 1.3 4.2 7.6-2.9 1.6-4.2-7.7L4 20z" fill="#fff" stroke="#000" stroke-width="1.2" stroke-linejoin="round"/></svg>
+
+    <div class="sub-line hide" id="subLine"></div>
+
+    <div class="overlay show" id="intro">
+      <div class="logos"><span class="pill vs"><span class="icon">&lt;/&gt;</span></span><span class="pill cc"><span class="icon">✱</span></span></div>
+      <h1>Läs i lugn och ro.<br><span>Agenterna säger till.</span></h1>
+      <p>En vanlig förmiddag med AgentPill och ClaudePill.</p>
+    </div>
+    <div class="overlay" id="outro">
+      <div class="logos">
+        <span class="pill vs active"><span class="icon">&lt;/&gt;</span><span class="more"><span class="dot"></span><span>AgentPill</span></span></span>
+        <span class="pill cc active"><span class="icon">✱</span><span class="more"><span class="dot"></span><span>ClaudePill</span></span></span>
+      </div>
+      <h1>Du jobbar.<br><span>Agenterna väntar på dig.</span></h1>
+      <p>Ingen flikväxling för att kolla läget. Allt körs lokalt på din Mac och startar när du loggar in.</p>
+    </div>
+  </div>
+
+  <div class="transport">
+    <button id="play" type="button">Pausa</button>
+    <button id="replay" type="button">Spela från början</button>
+    <div class="track" id="track" role="slider" aria-label="Tidslinje" aria-valuemin="0" aria-valuemax="52" aria-valuenow="0" tabindex="0"><div class="fill" id="fill"></div></div>
+    <span class="clock" id="clock">0:00 / 0:52</span>
+  </div>
+  <div class="chapters" id="chapters"></div>
+  <p class="note">Demo med exempeldata. Dokument, projekt och kod är påhittade.</p>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const stage = $("stage");
+  const el = {
+    browser: $("browser"), editor: $("editor"), chat: $("chat"), paper: $("paper"),
+    pillVs: $("pillVs"), pillCc: $("pillCc"), cardVs: $("cardVs"), cardCc: $("cardCc"),
+    cursor: $("cursor"), sub: $("subLine"), intro: $("intro"), outro: $("outro"),
+    term: $("term"), ask: $("ask"), status: $("agentStatus"), user: $("userMsg"), input: $("input"),
+  };
+
+  // Timers belonging to the current scene; cleared on seek so scrubbing stays consistent.
+  let timers = [];
+  const later = (fn, ms) => timers.push(setTimeout(fn, ms));
+  const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
+
+  const moveTo = (target) => {
+    const s = stage.getBoundingClientRect(), r = target.getBoundingClientRect();
+    const x = (r.left + r.width / 2 - s.left) / s.width * 100;
+    const y = (r.top + r.height / 2 - s.top) / s.width * 100;
+    el.cursor.style.left = (x - 0.3) + "cqw"; el.cursor.style.top = (y - 0.3) + "cqw";
+  };
+  const click = (target, at, then) => {
+    el.cursor.classList.add("on");
+    later(() => moveTo(target), at);
+    later(() => { target.classList.add("press"); setTimeout(() => target.classList.remove("press"), 220); }, at + 950);
+    if (then) later(then, at + 1200);
+  };
+  const setPill = (pill, s, label, time) => {
+    pill.dataset.s = s;
+    pill.classList.toggle("active", s !== "idle");
+    if (label) pill.querySelector(".lbl").textContent = label;
+    if (time) pill.querySelector(".time").textContent = time;
+    if (s === "approval" || s === "turn") { pill.classList.remove("ping"); void pill.offsetWidth; pill.classList.add("ping"); }
+  };
+  const say = (html) => {
+    el.sub.classList.add("hide");
+    later(() => { el.sub.innerHTML = html; if (html) el.sub.classList.remove("hide"); }, 300);
+  };
+  const front = (win) => {
+    [el.browser, el.editor, el.chat].forEach(w => w.classList.toggle("back", w !== win && w.classList.contains("show")));
+    $("appName").textContent = win === el.editor ? "Code" : win === el.chat ? "Claude" : "Webbläsare";
+  };
+  const termLines = (n) => ["t1", "t2", "t3"].forEach((id, i) => $(id).classList.toggle("v", i < n));
+
+  function reset() {
+    clearTimers();
+    el.intro.classList.add("show"); el.outro.classList.remove("show");
+    el.browser.classList.add("show"); el.editor.classList.remove("show"); el.chat.classList.remove("show");
+    front(el.browser);
+    el.paper.classList.remove("scrolled");
+    setPill(el.pillVs, "idle"); setPill(el.pillCc, "idle");
+    el.pillVs.classList.remove("ping"); el.pillCc.classList.remove("ping");
+    el.cardVs.classList.remove("show"); el.cardCc.classList.remove("show");
+    el.cursor.classList.remove("on");
+    el.term.classList.remove("open"); termLines(0);
+    el.ask.classList.remove("done"); el.ask.style.opacity = 1;
+    el.status.textContent = "Väntar på dig …";
+    el.user.classList.remove("v");
+    el.input.innerHTML = '<span class="ph">Svara Claude …</span>';
+    el.sub.classList.add("hide"); el.sub.innerHTML = "";
+  }
+
+  const scenes = [
+    [0, "Intro", () => {}],
+    [3.5, "Läser", () => {
+      el.intro.classList.remove("show");
+      setPill(el.pillVs, "working", "Arbetar"); setPill(el.pillCc, "working", "Arbetar");
+      later(() => el.paper.classList.add("scrolled"), 900);
+      say("Du läser ett dokument. Copilot och Claude jobbar i bakgrunden.");
+    }],
+    [10, "Copilot frågar", () => {
+      setPill(el.pillVs, "approval", "Väntar på godkännande", "0:04");
+      later(() => el.cardVs.classList.add("show"), 500);
+      say('VS Code-pillret blir orange och kortet fälls ut: <b>Copilot vill köra en build.</b>');
+    }],
+    [15, "Öppna VS Code", () => {
+      click($("openVs"), 0, () => {
+        el.cardVs.classList.remove("show");
+        el.editor.classList.add("show"); front(el.editor);
+      });
+      say("Ett klick på Öppna VS Code tar dig rakt till agenten.");
+    }],
+    [19, "Koden", () => {
+      el.cursor.classList.remove("on");
+      say("Där ser du ändringen i koden och vad agenten väntar på.");
+    }],
+    [23, "Tillåt", () => {
+      click($("allow"), 0, () => {
+        el.ask.classList.add("done");
+        el.status.textContent = "Bygger …";
+        setPill(el.pillVs, "working", "Arbetar");
+        el.term.classList.add("open");
+        later(() => termLines(1), 300); later(() => termLines(2), 900); later(() => termLines(3), 1800);
+        later(() => { el.status.textContent = "Klart. Bygget gick igenom."; }, 2000);
+      });
+      say("Du tillåter kommandot. Pillret går tillbaka till Arbetar och kortet är borta.");
+    }],
+    [29, "Claude klar", () => {
+      el.cursor.classList.remove("on");
+      setPill(el.pillVs, "idle");
+      setPill(el.pillCc, "turn", "Din tur", "0:02");
+      later(() => el.cardCc.classList.add("show"), 500);
+      say('Samtidigt blir Claude Code klar i ett annat projekt. <b>Din tur.</b>');
+    }],
+    [34, "Öppna Claude", () => {
+      click($("openCc"), 0, () => {
+        el.cardCc.classList.remove("show");
+        el.chat.classList.add("show"); front(el.chat);
+      });
+      say("Öppna Claude visar chatten där svaret väntar.");
+    }],
+    [38, "Svara", () => {
+      el.cursor.classList.remove("on");
+      const text = "Ja, öppna PR:en. Tack!";
+      el.input.innerHTML = '<span id="typed"></span><span class="caret"></span>';
+      [...text].forEach((ch, i) => later(() => { $("typed").textContent += ch; }, 300 + i * 55));
+      later(() => {
+        el.input.innerHTML = '<span class="ph">Svara Claude …</span>';
+        el.user.classList.add("v");
+        setPill(el.pillCc, "working", "Arbetar");
+      }, 300 + text.length * 55 + 400);
+      say("Du svarar. ClaudePill visar att Claude jobbar vidare.");
+    }],
+    [43, "Tillbaka", () => {
+      el.chat.classList.remove("show");
+      later(() => el.editor.classList.remove("show"), 350);
+      later(() => { front(el.browser); setPill(el.pillCc, "idle"); }, 700);
+      say("Allt stängs. Du är tillbaka i dokumentet, precis där du var.");
+    }],
+    [48, "Outro", () => { el.sub.classList.add("hide"); el.outro.classList.add("show"); }],
+  ];
+  const total = 52;
+
+  const chapWrap = $("chapters");
+  scenes.forEach(([t, name], i) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = name;
+    b.addEventListener("click", () => seek(t));
+    chapWrap.appendChild(b);
+  });
+
+  let t = 0, playing = true, last = performance.now(), idx = -1;
+  const fmt = s => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
+  const mark = i => chapWrap.querySelectorAll("button").forEach((b, j) => b.classList.toggle("on", j === i));
+
+  function run(i) { idx = i; scenes[i][2](); mark(i); }
+
+  // Jump: rebuild the state of every earlier scene instantly (motion off), then play the target scene.
+  function seek(s) {
+    t = Math.max(0, Math.min(total - 0.01, s));
+    let target = 0;
+    scenes.forEach(([st], i) => { if (st <= t) target = i; });
+    stage.style.setProperty("--instant", "1");
+    reset();
+    for (let i = 0; i < target; i++) {
+      scenes[i][2]();
+      // Flush this scene's timers synchronously so later scenes start from its end state.
+      const pending = timers; timers = [];
+      pending.forEach(id => clearTimeout(id));
+    }
+    applyEndStates(target);
+    t = scenes[target][0];
+    run(target);
+    if (!playing) toggle();
+  }
+
+  // End states of each scene (what its timers would have produced), used when scrubbing.
+  function applyEndStates(upTo) {
+    if (upTo > 1) el.paper.classList.add("scrolled");
+    if (upTo > 2 && upTo <= 3) el.cardVs.classList.add("show");
+    if (upTo > 3) { el.cardVs.classList.remove("show"); el.editor.classList.add("show"); front(el.editor); }
+    if (upTo > 5) { el.ask.classList.add("done"); el.status.textContent = "Klart. Bygget gick igenom."; el.term.classList.add("open"); termLines(3); setPill(el.pillVs, "working", "Arbetar"); }
+    if (upTo > 6) { setPill(el.pillVs, "idle"); el.cardCc.classList.add("show"); }
+    if (upTo > 7) { el.cardCc.classList.remove("show"); el.chat.classList.add("show"); front(el.chat); }
+    if (upTo > 8) { el.user.classList.add("v"); setPill(el.pillCc, "working", "Arbetar"); }
+    if (upTo > 9) { el.chat.classList.remove("show"); el.editor.classList.remove("show"); front(el.browser); setPill(el.pillCc, "idle"); }
+    el.cursor.classList.remove("on");
+    el.pillVs.classList.remove("ping"); el.pillCc.classList.remove("ping");
+  }
+
+  function toggle() { playing = !playing; $("play").textContent = playing ? "Pausa" : "Spela"; last = performance.now(); }
+
+  function frame(now) {
+    if (playing) {
+      t += (now - last) / 1000;
+      if (t >= total) { t = 0; reset(); idx = -1; }
+      if (idx + 1 < scenes.length && t >= scenes[idx + 1][0]) run(idx + 1);
+    }
+    last = now;
+    $("fill").style.width = (t / total * 100) + "%";
+    $("clock").textContent = fmt(t) + " / " + fmt(total);
+    $("track").setAttribute("aria-valuenow", Math.floor(t));
+    requestAnimationFrame(frame);
+  }
+
+  $("play").addEventListener("click", toggle);
+  $("replay").addEventListener("click", () => seek(0));
+  $("track").addEventListener("click", e => { const r = e.currentTarget.getBoundingClientRect(); seek((e.clientX - r.left) / r.width * total); });
+  $("track").addEventListener("keydown", e => { if (e.key === "ArrowRight") seek(t + 4); if (e.key === "ArrowLeft") seek(t - 4); });
+
+  reset(); run(0);
+  requestAnimationFrame(frame);
+})();
+</script>

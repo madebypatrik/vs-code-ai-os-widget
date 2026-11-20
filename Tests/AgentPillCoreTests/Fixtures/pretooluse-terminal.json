@@ -1,0 +1,15 @@
+{
+  "hook_event_name": "PreToolUse",
+  "session_id": "8f2c1a4e-0b7d-4c5e-9a31-2d6f0e8b7c11",
+  "cwd": "/Users/dev/projects/my-app",
+  "timestamp": "2026-11-19T17:12:03.412Z",
+  "transcript_path": "/Users/dev/Library/Application Support/Code/User/workspaceStorage/x/chat.json",
+  "tool_name": "run_in_terminal",
+  "tool_input": {
+    "command": "npm run build",
+    "explanation": "Build the project",
+    "isBackground": false
+  },
+  "tool_use_id": "call_123",
+  "some_future_field": { "nested": [1, 2, 3] }
+}

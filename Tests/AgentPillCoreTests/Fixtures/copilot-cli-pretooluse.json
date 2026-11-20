@@ -1,0 +1,8 @@
+{
+  "hookEventName": "preToolUse",
+  "sessionId": "cli-42",
+  "cwd": "/Users/dev/projects/other",
+  "timestamp": 1795194723,
+  "toolName": "bash",
+  "toolArgs": "{\"command\":\"git status\\n  && echo done\"}"
+}
