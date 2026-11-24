@@ -24,6 +24,9 @@ AgentPill is a macOS menu bar app (Swift 6, SwiftPM, macOS 14+) that shows when 
 
 ## Rules
 
+- **This repository is public.** Everything committed (code, tests, fixtures, README, commit messages, PR text, screenshots, promo files) can be read by anyone. Before every commit, check the diff for personal or sensitive data. Keep local logs, rendered previews and debug output out of the repo.
+- Never reveal anything about the developer's machine: no real home or absolute paths (`/Users/<name>`, `/private/…`, `/var/folders/…`, temp or scratchpad paths), usernames, hostnames, local network IPs, `file://` links, or links to private dashboards, sessions or artifacts. Only `127.0.0.1` and placeholder paths such as `/Users/dev/projects/my-app` may appear. Use `~` for paths in the user's home in docs and scripts.
+- Only link to public pages (the project's own GitHub repos, shields.io badges, official docs). Never paste links copied from a local tool, chat or log.
 - Run `swift test` before every commit. All tests must pass.
 - `report.sh` must never write to stdout and must always exit 0. Hook output can reach the agent.
 - The event server must stay bound to `127.0.0.1` and keep rejecting requests that carry an `Origin` header.
