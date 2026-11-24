@@ -16,6 +16,7 @@ final class AppSettings {
     private enum Key {
         static let port = "port"
         static let approvalDelay = "approvalDelay"
+        static let replyGraceDelay = "replyGraceDelay"
         static let soundEnabled = "soundEnabled"
         static let autoExpand = "autoExpand"
         static let dockBadgeEnabled = "dockBadgeEnabled"
@@ -28,6 +29,8 @@ final class AppSettings {
 
     var port: Int { didSet { defaults.set(port, forKey: Key.port) } }
     var approvalDelay: Double { didSet { defaults.set(approvalDelay, forKey: Key.approvalDelay) } }
+    /// Seconds after Stop before it counts as "your turn". Activity in between = interim reply.
+    var replyGraceDelay: Double { didSet { defaults.set(replyGraceDelay, forKey: Key.replyGraceDelay) } }
     var soundEnabled: Bool { didSet { defaults.set(soundEnabled, forKey: Key.soundEnabled) } }
     var autoExpand: Bool { didSet { defaults.set(autoExpand, forKey: Key.autoExpand) } }
     var dockBadgeEnabled: Bool { didSet { defaults.set(dockBadgeEnabled, forKey: Key.dockBadgeEnabled) } }
@@ -57,6 +60,7 @@ final class AppSettings {
         defaults.register(defaults: [
             Key.port: Self.defaultPort,
             Key.approvalDelay: 3.0,
+            Key.replyGraceDelay: 8.0,
             Key.soundEnabled: true,
             Key.autoExpand: true,
             Key.dockBadgeEnabled: true,
@@ -66,6 +70,7 @@ final class AppSettings {
         ])
         port = defaults.integer(forKey: Key.port)
         approvalDelay = defaults.double(forKey: Key.approvalDelay)
+        replyGraceDelay = defaults.double(forKey: Key.replyGraceDelay)
         soundEnabled = defaults.bool(forKey: Key.soundEnabled)
         autoExpand = defaults.bool(forKey: Key.autoExpand)
         dockBadgeEnabled = defaults.bool(forKey: Key.dockBadgeEnabled)
@@ -83,7 +88,11 @@ final class AppSettings {
     }
 
     var stateMachineConfig: StateMachineConfig {
-        StateMachineConfig(approvalDelay: max(0.5, approvalDelay), autoApprovedTools: autoApprovedTools)
+        StateMachineConfig(
+            approvalDelay: max(0.5, approvalDelay),
+            replyGraceDelay: max(0, replyGraceDelay),
+            autoApprovedTools: autoApprovedTools
+        )
     }
 
     var validPort: UInt16 {

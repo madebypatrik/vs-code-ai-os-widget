@@ -115,7 +115,8 @@ private struct CompactRow: View {
         switch session.state.displayState {
         case .needsApproval: "Väntar på godkännande"
         case .yourTurn: "Din tur"
-        default: "Arbetar"
+        case .replied: "Nytt svar"
+        default: session.hasInterimReply ? "Arbetar · nytt svar" : "Arbetar"
         }
     }
 

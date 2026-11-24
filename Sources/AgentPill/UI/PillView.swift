@@ -18,12 +18,19 @@ struct PillView: View {
                     .frame(width: 28, height: 20)
                     .background(Capsule().fill(Theme.cardBackground))
                     .overlay(Capsule().strokeBorder(Theme.brand.opacity(0.9), lineWidth: 1))
+                .transition(.opacity)
             } else {
                 HStack(spacing: 6) {
                     Image(systemName: Theme.brandSymbol)
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(Theme.brand)
-                    StatusDot(state: state)
+                    if state == .replied {
+                        ReplyIcon()
+                    } else if state == .working {
+                        Spinner() // something is in progress: small spinner, no card
+                    } else {
+                        StatusDot(state: state)
+                    }
                     Text(Theme.pillLabel(for: state))
                         .font(.system(size: 12))
                         .foregroundStyle(.white)
@@ -39,6 +46,9 @@ struct PillView: View {
                                 .foregroundStyle(Theme.color(for: top.state))
                         }
                     }
+                    if store.hasReply, state != .replied, !state.needsAttention {
+                        ReplyIcon() // replied earlier this turn, agent keeps working
+                    }
                     if count > 1 {
                         Text("\(count)")
                             .font(.system(size: 10, weight: .bold).monospacedDigit())
@@ -52,6 +62,7 @@ struct PillView: View {
                 .padding(.trailing, 10)
                 .frame(height: 20)
                 .background(Capsule().fill(Theme.cardBackground))
+                .transition(.scale(scale: 0.6, anchor: .leading).combined(with: .opacity)) // slides out from the icon
                 .overlay {
                     if state.needsAttention {
                         AttentionPulse() // your turn / approval: calm brand-colored breathing
@@ -81,6 +92,32 @@ struct AttentionPulse: View {
                 content.opacity(level)
             } animation: { _ in .easeInOut(duration: 1.4) }
             .allowsHitTesting(false)
+    }
+}
+
+/// Speech bubble: the agent sent a message, but it is not your turn (yet).
+struct ReplyIcon: View {
+    var body: some View {
+        Image(systemName: Theme.replySymbol)
+            .font(.system(size: 9, weight: .semibold))
+            .foregroundStyle(Theme.brand)
+            .help("Agenten har skickat ett svar men arbetar vidare")
+    }
+}
+
+/// Small rotating arc in the brand color, shown in the pill while the agent works.
+struct Spinner: View {
+    var size: CGFloat = 9
+    @State private var spinning = false
+
+    var body: some View {
+        Circle()
+            .trim(from: 0.15, to: 1)
+            .stroke(Theme.brand, style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
+            .frame(width: size, height: size)
+            .rotationEffect(.degrees(spinning ? 360 : 0))
+            .animation(.linear(duration: 0.9).repeatForever(autoreverses: false), value: spinning)
+            .onAppear { spinning = true }
     }
 }
 

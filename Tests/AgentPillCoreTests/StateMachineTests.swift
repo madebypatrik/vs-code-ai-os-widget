@@ -172,4 +172,79 @@ final class StateMachineTests: XCTestCase {
         XCTAssertEqual(machine.handle(event("UserPromptSubmit"), now: at(1)), [])
         XCTAssertEqual(machine.sessions["s1"]?.stateSince, t0)
     }
+
+    // MARK: - Interim replies (Stop, then the agent keeps working)
+
+    private func graceMachine() -> StateMachine {
+        StateMachine(config: .init(replyGraceDelay: 8, autoApprovedTools: ["read_file"]))
+    }
+
+    func testStopWithGraceIsRepliedNotYourTurn() {
+        var machine = graceMachine()
+        machine.handle(event("UserPromptSubmit"), now: t0)
+        let transitions = machine.handle(event("Stop"), now: at(5))
+        XCTAssertEqual(transitions.map(\.to), [.replied])
+        XCTAssertFalse(AgentState.replied.needsAttention)
+        XCTAssertTrue(machine.attentionSessions.isEmpty)
+        XCTAssertTrue(machine.hasReply)
+        XCTAssertEqual(machine.aggregateState, .replied)
+    }
+
+    func testRepliedBecomesYourTurnAfterGrace() {
+        var machine = graceMachine()
+        machine.handle(event("UserPromptSubmit"), now: t0)
+        machine.handle(event("Stop"), now: at(5))
+        XCTAssertEqual(machine.tick(now: at(12.9)), [])
+        let transitions = machine.tick(now: at(13))
+        XCTAssertEqual(transitions.map(\.to), [.yourTurn])
+        XCTAssertEqual(machine.sessions["s1"]?.stateSince, at(5), "waiting time counts from Stop")
+        XCTAssertFalse(machine.hasReply)
+        XCTAssertEqual(machine.attentionSessions.map(\.id), ["s1"])
+    }
+
+    func testActivityAfterStopMeansInterimReply() {
+        for next in ["PreToolUse", "PostToolUse"] {
+            var machine = graceMachine()
+            machine.handle(event("UserPromptSubmit"), now: t0)
+            machine.handle(event("Stop"), now: at(5))
+            machine.handle(event(next, tool: "read_file"), now: at(9))
+            XCTAssertEqual(machine.sessions["s1"]?.state.displayState, .working, next)
+            XCTAssertEqual(machine.sessions["s1"]?.stateSince, at(9), next)
+            XCTAssertEqual(machine.sessions["s1"]?.hasInterimReply, true, next)
+            XCTAssertTrue(machine.hasReply, next)
+            XCTAssertEqual(machine.tick(now: at(20)).map(\.to), [], "grace timer is cancelled")
+        }
+    }
+
+    func testInterimReplyClearedByPromptAndFinalStop() {
+        var machine = graceMachine()
+        machine.handle(event("UserPromptSubmit"), now: t0)
+        machine.handle(event("Stop"), now: at(1))
+        machine.handle(event("PostToolUse"), now: at(2))
+        machine.handle(event("Stop"), now: at(30))
+        XCTAssertEqual(machine.sessions["s1"]?.state, .replied)
+        machine.tick(now: at(40))
+        XCTAssertEqual(machine.sessions["s1"]?.state, .yourTurn)
+        XCTAssertEqual(machine.sessions["s1"]?.hasInterimReply, false)
+
+        machine.handle(event("Stop"), now: at(50))
+        XCTAssertEqual(machine.sessions["s1"]?.state, .yourTurn, "a second Stop keeps your turn")
+
+        machine.handle(event("UserPromptSubmit"), now: at(60))
+        machine.handle(event("Stop"), now: at(61))
+        machine.handle(event("PreToolUse", tool: "t"), now: at(62))
+        machine.handle(event("UserPromptSubmit"), now: at(70))
+        XCTAssertEqual(machine.sessions["s1"]?.hasInterimReply, false)
+        XCTAssertFalse(machine.hasReply)
+    }
+
+    func testRepliedRanksAboveWorkingBelowYourTurn() {
+        var machine = graceMachine()
+        machine.handle(event("UserPromptSubmit", session: "a"), now: t0)
+        machine.handle(event("Stop", session: "b"), now: t0)
+        XCTAssertEqual(machine.aggregateState, .replied)
+        machine.handle(event("Stop", session: "c"), now: t0)
+        machine.tick(now: at(10))
+        XCTAssertEqual(machine.aggregateState, .yourTurn)
+    }
 }

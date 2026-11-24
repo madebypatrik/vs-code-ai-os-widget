@@ -45,6 +45,7 @@ final class StatusItemController: NSObject {
     private func observe() {
         withObservationTracking {
             _ = store.aggregateState
+            _ = store.hasReply
             _ = store.sessions.first?.projectName
             _ = store.sessions.count
             _ = store.now // elapsed time in the pill can change its width

@@ -26,6 +26,9 @@ enum PreviewRenderer {
         let approval = store([("UserPromptSubmit", "my-app", nil, nil),
                               ("PreToolUse", "my-app", "run_in_terminal", "npm run build")])
         let yourTurn = store([("Stop", "my-app", nil, nil)], ago: 75)
+        let replied = store([("UserPromptSubmit", "my-app", nil, nil), ("Stop", "my-app", nil, nil)], ago: 2)
+        let interim = store([("UserPromptSubmit", "my-app", nil, nil), ("Stop", "my-app", nil, nil),
+                             ("PostToolUse", "my-app", "read_file", nil)], ago: 2)
         let working = store([("UserPromptSubmit", "my-app", nil, nil)], ago: 12)
         let multi = store([("UserPromptSubmit", "my-app", nil, nil),
                            ("PreToolUse", "my-app", "run_in_terminal", "npm run build"),
@@ -35,7 +38,7 @@ enum PreviewRenderer {
 
         let panel = PanelModel()
         panel.isVisible = true
-        for (name, s) in [("approval", approval), ("yourturn", yourTurn), ("working", working), ("multi", multi), ("idle", idle)] {
+        for (name, s) in [("approval", approval), ("yourturn", yourTurn), ("replied", replied), ("interim", interim), ("working", working), ("multi", multi), ("idle", idle)] {
             write(PillView(store: s).padding(6).background(Color(white: 0.92)), to: dir.appendingPathComponent("pill-\(name).png"))
             let card = ActivityCardView(store: s, panel: panel, port: 47823, onOpen: { _ in }, onSnooze: {})
                 .padding(10).background(Color(white: 0.92)).environment(\.colorScheme, .dark)

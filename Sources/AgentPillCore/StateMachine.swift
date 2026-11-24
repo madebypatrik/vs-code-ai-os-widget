@@ -9,9 +9,13 @@ public struct StateMachineConfig: Sendable, Equatable {
     public var staleTimeout: TimeInterval
     /// Tools that never need approval and therefore never start the approval timer.
     public var autoApprovedTools: Set<String>
+    /// Time after Stop during which further agent activity means it only sent an interim
+    /// message and keeps working. 0 = Stop is always `yourTurn` right away.
+    public var replyGraceDelay: TimeInterval
 
     public init(
         approvalDelay: TimeInterval = 3,
+        replyGraceDelay: TimeInterval = 0,
         yourTurnTimeout: TimeInterval? = nil,
         staleTimeout: TimeInterval = 2 * 60 * 60,
         autoApprovedTools: Set<String> = []
@@ -20,6 +24,7 @@ public struct StateMachineConfig: Sendable, Equatable {
         self.yourTurnTimeout = yourTurnTimeout
         self.staleTimeout = staleTimeout
         self.autoApprovedTools = autoApprovedTools
+        self.replyGraceDelay = replyGraceDelay
     }
 }
 
@@ -60,6 +65,12 @@ public struct StateMachine: Sendable {
 
     public var attentionSessions: [Session] { orderedSessions.filter { $0.state.needsAttention } }
 
+    /// True when some session has a message from the agent that is not a "your turn" yet:
+    /// it just replied, or it replied and then kept working.
+    public var hasReply: Bool {
+        sessions.values.contains { $0.state == .replied || ($0.hasInterimReply && !$0.state.needsAttention) }
+    }
+
     // MARK: - Events
 
     @discardableResult
@@ -83,11 +94,13 @@ public struct StateMachine: Sendable {
         case .userPromptSubmit:
             Self.set(&session, to: .working, now: now)
             Self.clearTool(&session)
+            session.hasInterimReply = false
 
         case .preToolUse:
             session.pendingToolCount += 1
             let summary = event.toolSummary
             let autoApproved = event.toolName.map { config.autoApprovedTools.contains($0) } ?? false
+            Self.resumeAfterReply(&session, now: now)
             switch session.state {
             case .needsApproval:
                 break // Still waiting for the user; keep showing the first blocked tool.
@@ -110,7 +123,8 @@ public struct StateMachine: Sendable {
                     Self.set(&session, to: .working, now: now)
                     Self.clearTool(&session)
                 }
-            case .idle, .yourTurn:
+            case .idle, .yourTurn, .replied:
+                Self.resumeAfterReply(&session, now: now)
                 Self.set(&session, to: .working, now: now)
                 Self.clearTool(&session)
             case .working:
@@ -118,8 +132,14 @@ public struct StateMachine: Sendable {
             }
 
         case .stop:
-            Self.set(&session, to: .yourTurn, now: now)
             Self.clearTool(&session)
+            if config.replyGraceDelay > 0, session.state != .yourTurn {
+                Self.set(&session, to: .replied, now: now)
+                session.yourTurnDeadline = now.addingTimeInterval(config.replyGraceDelay)
+            } else {
+                Self.set(&session, to: .yourTurn, now: now)
+                session.hasInterimReply = false
+            }
 
         case .unknown:
             break
@@ -144,6 +164,15 @@ public struct StateMachine: Sendable {
             if expired {
                 sessions[id] = nil
                 transitions.append(StateTransition(sessionId: id, from: session.state, to: .idle, session: nil))
+                continue
+            }
+
+            if session.state == .replied, let deadline = session.yourTurnDeadline, now >= deadline {
+                session.state = .yourTurn // stateSince stays at Stop
+                session.yourTurnDeadline = nil
+                session.hasInterimReply = false
+                sessions[id] = session
+                transitions.append(StateTransition(sessionId: id, from: .replied, to: .yourTurn, session: session))
                 continue
             }
 
@@ -185,6 +214,14 @@ public struct StateMachine: Sendable {
         guard session.state != state else { return }
         session.state = state
         session.stateSince = now
+    }
+
+    /// Activity after Stop: the message was an interim reply and the agent keeps working.
+    private static func resumeAfterReply(_ session: inout Session, now: Date) {
+        guard session.state == .replied else { return }
+        set(&session, to: .working, now: now)
+        session.yourTurnDeadline = nil
+        session.hasInterimReply = true
     }
 
     private static func clearTool(_ session: inout Session) {

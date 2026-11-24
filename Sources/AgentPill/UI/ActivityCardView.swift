@@ -101,6 +101,7 @@ struct ActivityCardView: View {
         let (lead, accentWord): (String, String) = switch session.state.displayState {
         case .needsApproval: ("Väntar på ", "godkännande")
         case .yourTurn: ("Svaret är klart – ", "din tur")
+        case .replied: ("Nytt ", "svar")
         default: ("Arbetar", "")
         }
         let accent = session.state.needsAttention ? Theme.color(for: session.state) : .white
@@ -115,6 +116,8 @@ struct ActivityCardView: View {
             detail = toolText(tool)
         } else if session.state == .yourTurn {
             detail = Text("Väntat")
+        } else if session.state == .replied {
+            detail = Text("Agenten kan fortsätta")
         } else {
             detail = Text("Pågår")
         }
@@ -180,7 +183,8 @@ private struct SessionRow: View {
         switch session.state.displayState {
         case .needsApproval: session.pendingTool?.plainText ?? "Väntar på godkännande"
         case .yourTurn: "Din tur"
-        default: "Arbetar"
+        case .replied: "Nytt svar"
+        default: session.hasInterimReply ? "Arbetar · nytt svar" : "Arbetar"
         }
     }
 }

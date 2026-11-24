@@ -2,7 +2,9 @@ import Foundation
 
 /// Per-session agent state. Raw values encode urgency, so `max()` gives the most urgent state.
 public enum AgentState: Int, Comparable, Sendable, CaseIterable {
-    case idle, working, toolPending, yourTurn, needsApproval
+    /// `replied`: the agent sent a message (Stop) but may keep working. It becomes `yourTurn`
+    /// only if nothing else happens within the reply grace period.
+    case idle, working, toolPending, replied, yourTurn, needsApproval
 
     public static func < (lhs: AgentState, rhs: AgentState) -> Bool { lhs.rawValue < rhs.rawValue }
 
@@ -27,6 +29,11 @@ public struct Session: Identifiable, Equatable, Sendable {
     public var approvalDeadline: Date?
     /// Number of PreToolUse events without a matching PostToolUse (parallel tool calls).
     public var pendingToolCount: Int
+    /// When a `replied` session becomes `yourTurn`. Nil in other states.
+    public var yourTurnDeadline: Date?
+    /// The agent sent a message during this turn and then kept working. Cleared by a new
+    /// prompt and when the turn really ends (`yourTurn`).
+    public var hasInterimReply: Bool
 
     public init(
         id: String,
@@ -36,7 +43,9 @@ public struct Session: Identifiable, Equatable, Sendable {
         stateSince: Date,
         lastEventAt: Date,
         approvalDeadline: Date? = nil,
-        pendingToolCount: Int = 0
+        pendingToolCount: Int = 0,
+        yourTurnDeadline: Date? = nil,
+        hasInterimReply: Bool = false
     ) {
         self.id = id
         self.cwd = cwd
@@ -47,6 +56,8 @@ public struct Session: Identifiable, Equatable, Sendable {
         self.lastEventAt = lastEventAt
         self.approvalDeadline = approvalDeadline
         self.pendingToolCount = pendingToolCount
+        self.yourTurnDeadline = yourTurnDeadline
+        self.hasInterimReply = hasInterimReply
     }
 
     public static func projectName(for cwd: String) -> String {

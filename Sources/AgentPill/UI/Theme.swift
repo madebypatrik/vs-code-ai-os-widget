@@ -13,6 +13,8 @@ enum Theme {
     static let gray = Color(hex: 0x8E8E8A)
     static let secondaryText = Color(hex: 0xB4B2A9)
     static let bodyText = Color(hex: 0xD3D1C7)
+    /// Shown when the agent sent a message that is not "your turn" (it may keep working).
+    static let replySymbol = "text.bubble.fill"
     static let cardWidth: CGFloat = 340
     static let cardRadius: CGFloat = 18
 
@@ -20,6 +22,7 @@ enum Theme {
         switch state.displayState {
         case .needsApproval: orange
         case .yourTurn: green
+        case .replied: brand
         default: gray
         }
     }
@@ -28,6 +31,7 @@ enum Theme {
         switch state.displayState {
         case .needsApproval: "Väntar"
         case .yourTurn: "Din tur"
+        case .replied: "Svar"
         case .working, .toolPending: "Arbetar"
         case .idle: ""
         }

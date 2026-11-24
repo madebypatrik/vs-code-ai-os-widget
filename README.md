@@ -104,6 +104,7 @@ VS Code Copilot ──hook──▶ ~/.agentpill/report.sh ──POST──▶ 1
 1. `scripts/install.sh` writes `~/.copilot/hooks/agentpill.json`, which runs `report.sh` on `UserPromptSubmit`, `PreToolUse`, `PostToolUse` and `Stop`.
 2. `report.sh` forwards the hook payload to the app on localhost and always exits 0, so it can never block the agent.
 3. A pure state machine turns events into states. A tool call that has had no `PostToolUse` after 3 seconds is treated as waiting for approval.
+4. `Stop` does not mean "your turn" right away. The agent sometimes sends a message and then keeps working. For 8 seconds (configurable) the pill shows a speech bubble ("Svar"). If a tool event arrives in that window, the message was an interim reply: the pill goes back to working and keeps a small bubble until the turn ends. If nothing happens, it becomes "Din tur" and the card and notification appear as before.
 
 ### Development
 ```bash

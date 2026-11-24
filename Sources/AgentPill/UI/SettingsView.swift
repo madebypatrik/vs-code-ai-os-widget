@@ -28,6 +28,15 @@ struct SettingsView: View {
                             .frame(width: 44, alignment: .trailing)
                     }
                 }
+                LabeledContent("Väntetid innan \"Din tur\"") {
+                    HStack {
+                        Slider(value: $settings.replyGraceDelay, in: 0...30, step: 1)
+                        Text("\(settings.replyGraceDelay, specifier: "%.0f") s")
+                            .monospacedDigit()
+                            .frame(width: 44, alignment: .trailing)
+                    }
+                }
+                .help("Om agenten fortsätter arbeta inom den här tiden efter ett svar visas bara en pratbubbla i menyraden.")
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Auto-godkända verktyg (startar aldrig timern)")
                     TextField("read_file, list_dir, …", text: $settings.autoApprovedToolsText, axis: .vertical)

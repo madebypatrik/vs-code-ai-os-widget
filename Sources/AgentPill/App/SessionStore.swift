@@ -23,6 +23,8 @@ final class SessionStore {
     var sessions: [Session] { machine.orderedSessions }
     var attentionSessions: [Session] { machine.attentionSessions }
     var aggregateState: AgentState { machine.aggregateState }
+    /// The agent sent a message that is not "your turn" (menu bar shows a speech bubble).
+    var hasReply: Bool { machine.hasReply }
 
     func start() {
         let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
