@@ -30,6 +30,27 @@ final class HookEventDecodingTests: XCTestCase {
         XCTAssertNil(event.toolSummary)
     }
 
+    func testSubagentLinksToParentViaTranscriptPath() throws {
+        let event = try fixture("subagent-stop")
+        XCTAssertEqual(event.kind, .stop)
+        XCTAssertEqual(event.parentSessionId, "8f2c1a4e-0b7d-4c5e-9a31-2d6f0e8b7c11")
+    }
+
+    func testOwnTranscriptPathIsNotAParent() throws {
+        let json = #"""
+        {"hook_event_name":"Stop","session_id":"abc","transcript_path":"/Users/dev/.copilot/session-state/abc/events.jsonl"}
+        """#
+        XCTAssertNil(try HookEvent.decode(Data(json.utf8)).parentSessionId)
+        XCTAssertNil(try fixture("stop").parentSessionId)
+    }
+
+    func testCamelCaseParentAgentId() throws {
+        let json = #"""
+        {"hookEventName":"agentStop","sessionId":"child","agentId":"child","parentAgentId":"parent"}
+        """#
+        XCTAssertEqual(try HookEvent.decode(Data(json.utf8)).parentSessionId, "parent")
+    }
+
     func testUserPromptSubmit() throws {
         XCTAssertEqual(try fixture("userpromptsubmit").kind, .userPromptSubmit)
     }

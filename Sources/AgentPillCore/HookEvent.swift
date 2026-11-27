@@ -54,6 +54,9 @@ public struct HookEvent: Decodable, Sendable, Equatable {
     public var toolInput: JSONValue?
     public var timestamp: Date?
     public var stopReason: String?
+    /// Session of the agent that started this one when the event comes from a subagent
+    /// (Copilot runs subagents under their own session id). Nil for top-level sessions.
+    public var parentSessionId: String?
 
     public var kind: Kind { Kind(name: eventName) }
 
@@ -64,7 +67,8 @@ public struct HookEvent: Decodable, Sendable, Equatable {
         toolName: String? = nil,
         toolInput: JSONValue? = nil,
         timestamp: Date? = nil,
-        stopReason: String? = nil
+        stopReason: String? = nil,
+        parentSessionId: String? = nil
     ) {
         self.eventName = eventName
         self.sessionId = sessionId
@@ -73,6 +77,7 @@ public struct HookEvent: Decodable, Sendable, Equatable {
         self.toolInput = toolInput
         self.timestamp = timestamp
         self.stopReason = stopReason
+        self.parentSessionId = parentSessionId
     }
 
     public static func decode(_ data: Data) throws -> HookEvent {
@@ -118,6 +123,20 @@ public struct HookEvent: Decodable, Sendable, Equatable {
         toolInput = value("tool_input", "toolInput", "toolArgs", "tool_args")
         stopReason = value("stop_reason", "stopReason", "reason")?.stringValue
         timestamp = value("timestamp", "time").flatMap(Self.parseDate)
+
+        let sessionId = self.sessionId
+        let parent = value("parent_agent_id", "parentAgentId", "parent_session_id", "parentSessionId")?.stringValue
+            ?? value("transcript_path", "transcriptPath")?.stringValue.flatMap(Self.sessionId(inTranscriptPath:))
+        parentSessionId = parent.flatMap { $0.isEmpty || $0 == sessionId ? nil : $0 }
+    }
+
+    /// Session id from a Copilot transcript path (`…/session-state/<id>/events.jsonl`).
+    /// Subagents report their parent's transcript, which is how they are linked to it.
+    static func sessionId(inTranscriptPath path: String) -> String? {
+        let parts = path.split(separator: "/").map(String.init)
+        guard let index = parts.firstIndex(of: "session-state"), index + 1 < parts.count else { return nil }
+        let id = parts[index + 1]
+        return id.isEmpty ? nil : id
     }
 
     static func parseDate(_ value: JSONValue) -> Date? {

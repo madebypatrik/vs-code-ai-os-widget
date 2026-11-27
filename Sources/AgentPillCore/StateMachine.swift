@@ -40,6 +40,8 @@ public struct StateTransition: Equatable, Sendable {
 public struct StateMachine: Sendable {
     public var config: StateMachineConfig
     public private(set) var sessions: [String: Session] = [:]
+    /// Subagent session id → the session that started it. Subagents are not shown as sessions.
+    public private(set) var parentOf: [String: String] = [:]
 
     public init(config: StateMachineConfig = StateMachineConfig()) {
         self.config = config
@@ -75,6 +77,11 @@ public struct StateMachine: Sendable {
 
     @discardableResult
     public mutating func handle(_ event: HookEvent, now: Date = Date()) -> [StateTransition] {
+        if let parent = event.parentSessionId { parentOf[event.sessionId] = parent }
+        if let parent = parentOf[event.sessionId] {
+            return handleSubagent(event, parent: parent, now: now)
+        }
+
         let kind = event.kind
         guard kind != .unknown else {
             sessions[event.sessionId]?.lastEventAt = now
@@ -150,6 +157,28 @@ public struct StateMachine: Sendable {
         return [StateTransition(sessionId: session.id, from: previous, to: session.state, session: session)]
     }
 
+    /// Subagent events belong to the parent session. Only their tool calls matter (a subagent
+    /// tool can wait for approval); their prompt and Stop say nothing about the user's turn.
+    private mutating func handleSubagent(_ event: HookEvent, parent: String, now: Date) -> [StateTransition] {
+        var transitions: [StateTransition] = []
+        // A row created before the link was known (e.g. tool event before the subagent prompt).
+        if let orphan = sessions.removeValue(forKey: event.sessionId) {
+            transitions.append(StateTransition(sessionId: orphan.id, from: orphan.state, to: .idle, session: nil))
+        }
+        guard var session = sessions[parent] else { return transitions }
+        session.lastEventAt = now
+        sessions[parent] = session
+
+        let busy: Set<AgentState> = [.working, .toolPending, .needsApproval]
+        guard event.kind == .preToolUse || event.kind == .postToolUse, busy.contains(session.state) else {
+            return transitions
+        }
+        var forwarded = event
+        forwarded.sessionId = parent
+        forwarded.parentSessionId = nil
+        return transitions + handle(forwarded, now: now)
+    }
+
     /// Advances timers. Call about once per second.
     @discardableResult
     public mutating func tick(now: Date = Date()) -> [StateTransition] {
@@ -163,6 +192,7 @@ public struct StateMachine: Sendable {
                 : idleFor >= config.staleTimeout
             if expired {
                 sessions[id] = nil
+                parentOf = parentOf.filter { $0.value != id }
                 transitions.append(StateTransition(sessionId: id, from: session.state, to: .idle, session: nil))
                 continue
             }
@@ -205,6 +235,7 @@ public struct StateMachine: Sendable {
     @discardableResult
     public mutating func remove(sessionId: String) -> StateTransition? {
         guard let session = sessions.removeValue(forKey: sessionId) else { return nil }
+        parentOf = parentOf.filter { $0.value != sessionId }
         return StateTransition(sessionId: sessionId, from: session.state, to: .idle, session: nil)
     }
 

@@ -247,4 +247,58 @@ final class StateMachineTests: XCTestCase {
         machine.tick(now: at(10))
         XCTAssertEqual(machine.aggregateState, .yourTurn)
     }
+
+    // MARK: - Subagents
+
+    private func subagent(_ name: String, tool: String? = nil, command: String? = nil) -> HookEvent {
+        var e = event(name, session: "child", tool: tool, command: command)
+        e.parentSessionId = "s1"
+        return e
+    }
+
+    func testSubagentIsNotShownAsOwnSession() {
+        var machine = StateMachine()
+        machine.handle(event("UserPromptSubmit"), now: t0)
+        machine.handle(subagent("UserPromptSubmit"), now: at(1))
+        machine.handle(subagent("Stop"), now: at(2))
+        XCTAssertEqual(Array(machine.sessions.keys), ["s1"])
+        XCTAssertEqual(machine.sessions["s1"]?.state, .working, "subagent Stop is not the user's turn")
+    }
+
+    func testSubagentToolCanWaitForApprovalInParent() {
+        var machine = StateMachine(config: .init(approvalDelay: 3))
+        machine.handle(event("UserPromptSubmit"), now: t0)
+        machine.handle(subagent("UserPromptSubmit"), now: at(1))
+        // Tool events carry no parent link; the earlier prompt taught it.
+        machine.handle(event("PreToolUse", session: "child", tool: "Bash", command: "npm test"), now: at(2))
+        XCTAssertEqual(machine.tick(now: at(5)).map(\.to), [.needsApproval])
+        XCTAssertEqual(machine.sessions["s1"]?.pendingTool?.detail, "npm test")
+        machine.handle(event("PostToolUse", session: "child", tool: "Bash"), now: at(9))
+        XCTAssertEqual(machine.sessions["s1"]?.state, .working)
+        XCTAssertNil(machine.sessions["child"])
+    }
+
+    func testBackgroundSubagentKeepsParentsTurn() {
+        var machine = StateMachine(config: .init(approvalDelay: 3))
+        machine.handle(event("UserPromptSubmit"), now: t0)
+        machine.handle(subagent("UserPromptSubmit"), now: at(1))
+        machine.handle(event("Stop"), now: at(2))
+        machine.handle(event("PreToolUse", session: "child", tool: "Read"), now: at(3))
+        machine.handle(event("PostToolUse", session: "child", tool: "Read"), now: at(4))
+        machine.handle(subagent("Stop"), now: at(5))
+        XCTAssertEqual(machine.tick(now: at(10)), [])
+        XCTAssertEqual(machine.sessions["s1"]?.state, .yourTurn)
+        XCTAssertEqual(machine.sessions.count, 1)
+    }
+
+    func testOrphanRowIsRemovedOnceSubagentIsLinked() {
+        var machine = StateMachine()
+        machine.handle(event("UserPromptSubmit"), now: t0)
+        machine.handle(event("PreToolUse", session: "child", tool: "Read"), now: at(1))
+        XCTAssertNotNil(machine.sessions["child"])
+        let transitions = machine.handle(subagent("Stop"), now: at(2))
+        XCTAssertNil(machine.sessions["child"])
+        XCTAssertEqual(transitions.map(\.sessionId), ["child"])
+        XCTAssertEqual(machine.sessions["s1"]?.state, .working)
+    }
 }
